@@ -1,4 +1,5 @@
+from .routes import bp
+
 
 def init_app(app):
-    from .routes import bp
-    app.register_blueprint(bp, url_prefix="/api/user")
+    app.register_blueprint(bp)
