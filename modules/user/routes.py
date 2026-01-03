@@ -1,79 +1,113 @@
-from flask import Blueprint, jsonify, request, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt
+from werkzeug.security import generate_password_hash
 
-from models import db
 from models.user import User
+from extensions import db
 
-bp = Blueprint("user", __name__, url_prefix="/api/user")
+bp = Blueprint("user", __name__, url_prefix="/api/users")
 
 
-def require_admin():
-    identity = get_jwt_identity()
+def admin_required():
     claims = get_jwt()
-
-    if claims.get("role") != "admin":
-        abort(403)
-
-    user = User.query.filter_by(username=identity).first()
-    if not user or user.role != "admin" or not user.is_active:
-        abort(403)
-
-    return user
+    return claims.get("role") == "admin"
 
 
 @bp.route("", methods=["GET"])
 @jwt_required()
 def list_users():
-    require_admin()
+    if not admin_required():
+        return jsonify({"error": "admin only"}), 403
 
     users = User.query.order_by(User.id).all()
-    return jsonify({
-        "status": "ok",
-        "users": [
-            {
-                "id": u.id,
-                "username": u.username,
-                "role": u.role,
-                "is_active": bool(u.is_active)
-            }
-            for u in users
-        ]
-    })
+    return jsonify([
+        {
+            "id": u.id,
+            "username": u.username,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "is_active": u.is_active,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        }
+        for u in users
+    ])
+
+
+@bp.route("", methods=["POST"])
+@jwt_required()
+def create_user():
+    if not admin_required():
+        return jsonify({"error": "admin only"}), 403
+
+    data = request.get_json() or {}
+
+    username = data.get("username")
+    password = data.get("password")
+    role = data.get("role", "user")
+
+    if not username or not password:
+        return jsonify({"error": "username and password required"}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({"error": "username already exists"}), 400
+
+    user = User(
+        username=username,
+        name=data.get("name", ""),
+        email=data.get("email", ""),
+        role=role,
+        is_active=True,
+        password_hash=generate_password_hash(password),
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"message": "user created", "id": user.id})
+
+
+@bp.route("/<int:user_id>", methods=["PUT"])
+@jwt_required()
+def update_user(user_id):
+    if not admin_required():
+        return jsonify({"error": "admin only"}), 403
+
+    user = User.query.get_or_404(user_id)
+    data = request.get_json() or {}
+
+    user.name = data.get("name", user.name)
+    user.email = data.get("email", user.email)
+    user.role = data.get("role", user.role)
+
+    if "password" in data and data["password"]:
+        user.password_hash = generate_password_hash(data["password"])
+
+    db.session.commit()
+    return jsonify({"message": "user updated"})
 
 
 @bp.route("/<int:user_id>/disable", methods=["POST"])
 @jwt_required()
 def disable_user(user_id):
-    current_user = require_admin()
-
-    if current_user.id == user_id:
-        return jsonify({
-            "status": "error",
-            "message": "cannot disable yourself"
-        }), 400
+    if not admin_required():
+        return jsonify({"error": "admin only"}), 403
 
     user = User.query.get_or_404(user_id)
     user.is_active = False
     db.session.commit()
 
-    return jsonify({
-        "status": "ok",
-        "message": "user disabled",
-        "user_id": user.id
-    })
+    return jsonify({"message": "user disabled"})
 
 
 @bp.route("/<int:user_id>/enable", methods=["POST"])
 @jwt_required()
 def enable_user(user_id):
-    require_admin()
+    if not admin_required():
+        return jsonify({"error": "admin only"}), 403
 
     user = User.query.get_or_404(user_id)
     user.is_active = True
     db.session.commit()
 
-    return jsonify({
-        "status": "ok",
-        "message": "user enabled",
-        "user_id": user.id
-    })
+    return jsonify({"message": "user enabled"})
