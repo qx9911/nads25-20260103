@@ -1,0 +1,19 @@
+services:
+  backend:
+    container_name: nads25-backend
+    build: ./backend
+    ports:
+      - "20010:5000"
+    restart: unless-stopped
+
+  frontend:
+    container_name: nads25-frontend
+    image: nginx:1.28.0
+    ports:
+      - "20011:80"
+    volumes:
+      - ./frontend/build/web:/usr/share/nginx/html:ro
+      - ./frontend/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    restart: unless-stopped

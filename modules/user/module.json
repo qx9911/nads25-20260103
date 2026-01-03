@@ -1,0 +1,4 @@
+{
+  "name": "user",
+  "url_prefix": "/api/user"
+}

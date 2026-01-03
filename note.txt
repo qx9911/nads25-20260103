@@ -1,0 +1,38 @@
+
+#########################################################################
+#########################################################################
+#########################################################################
+#########################################################################
+#########################################################################
+
+flutter build web
+docker-compose up -d --build
+
+cd frontend
+flutter clean
+flutter pub get
+flutter build web
+cd ..
+
+cd frontend
+flutter clean
+flutter pub get
+flutter build web
+cd ..
+
+#########################################################################
+#########################################################################
+#########################################################################
+#########################################################################
+#########################################################################
+localStorage.getItem('access_token')
+
+
+
+
+
+peter@gino25:/home/apps/nads25/backend$ curl http://127.0.0.1:20010/api/system/health
+{"status":"ok"}
+
+peter@gino25:/home/apps/nads25/backend$ curl -X POST http://127.0.0.1:20010/api/auth/login
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2NzMzODYxOSwianRpIjoiMDY2NmRmNjktYTRjZS00MGFiLThmNmItNTNiZGZmYzRlMjZkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6InBldGVyIiwibmJmIjoxNzY3MzM4NjE5LCJjc3JmIjoiY2I1NDdkNzAtNjE4OC00MzNkLWFjYjYtMWUzMWE2ZGEwNGQ2IiwiZXhwIjoxNzY3MzM5NTE5LCJyb2xlIjoiYWRtaW4ifQ.GccrLvH_R8QeXddicAyM_4yKXLjyZmRrys2YkbhuhjI"}
